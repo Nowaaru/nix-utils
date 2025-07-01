@@ -13,10 +13,12 @@
 
     nixgl.url = "github:nix-community/nixGL";
     lanzaboote.url = "github:nix-community/lanzaboote";
+    home-manager.url = "github:nix-community/home-manager";
   };
 
   outputs = inputs @ {
     flake-parts,
+    home-manager,
     nixpkgs-lib,
     ...
   }:
@@ -32,7 +34,12 @@
         };
       });
     in {
+      imports = [
+        inputs.home-manager.flakeModules.home-manager
+      ];
+
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+
       perSystem = {
         config,
         self',
@@ -90,43 +97,50 @@
         # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
       };
 
-      flake.lib = lib;
-      flake.overlays = let
-        mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
-      in {
-        # The usual flake attributes can be defined here, including system-
-        # agnostic ones like nixosModule and system-enumerating ones, although
-        # those are more easily expressed in perSystem.
-        extend-lib = mkOverlay (overlayParams @ {config, ...}: {
-          inherit lib;
-        });
+      flake = {
+        inherit lib;
 
-        node-neovim = mkOverlay (overlayParams @ {config, ...}: {
-          nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
-        });
+        nixosModules = {
+          gpu-screen-recorder = import ./modules/gpu-screen-recorder;
+        };
 
-        stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
-          inherit
-            (config.legacyPackages.stable)
-            basedpyright
-            lldb
-            ;
-        });
-
-        wine-update-10-2 = let
-          version = "10.2";
-        in
-          mkOverlay (overlayParams @ {config, ...}: {
-            wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
-              a
-              // {
-                inherit version;
-                src = builtins.fetchurl {
-                  url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
-                  sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
-                };
-              });
+        overlays = let
+          mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
+        in {
+          # The usual flake attributes can be defined here, including system-
+          # agnostic ones like nixosModule and system-enumerating ones, although
+          # those are more easily expressed in perSystem.
+          extend-lib = mkOverlay (overlayParams @ {config, ...}: {
+            inherit lib;
           });
+
+          node-neovim = mkOverlay (overlayParams @ {config, ...}: {
+            nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
+          });
+
+          stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
+            inherit
+              (config.legacyPackages.stable)
+              basedpyright
+              lldb
+              ;
+          });
+
+          wine-update-10-2 = let
+            version = "10.2";
+          in
+            mkOverlay (overlayParams @ {config, ...}: {
+              wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
+                a
+                // {
+                  inherit version;
+                  src = builtins.fetchurl {
+                    url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
+                    sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
+                  };
+                });
+            });
+        };
       };
     });
 }
