@@ -33,7 +33,7 @@
           mkFlake = flake-parts.lib.mkFlake {inherit inputs;};
         };
       });
-    in {
+    in rec {
       imports = [
         inputs.home-manager.flakeModules.home-manager
       ];
@@ -48,15 +48,8 @@
         pkgs,
         system,
         ...
-      }: let
-        overlays = import ./overlays withSystem (inputs
-          // {
-            inherit (default) lib;
-          });
-
-        default = import inputs.nixpkgs {
-          inherit system overlays config;
-        };
+      } @ systemArguments: let
+        default = import inputs.nixpkgs {inherit system config;};
         config = {
           allowUnfree = true;
           permittedInsecurePackages = [
@@ -71,23 +64,17 @@
         # overlayAttrs = lib.foldlAttrs (acc: k: v: acc // { ${lib.strings.removeSuffix ".nix" k} = import builtins.readDir ./overlays);
 
         legacyPackages = {
-          inherit default;
-          ligmaballs = self';
-
-          stable = import inputs.nixpkgs-mirror {
-            inherit system overlays config;
-          };
-
-          master = import inputs.nixpkgs-master {
-            inherit system overlays config;
-          };
-
+          stable = import inputs.nixpkgs-mirror {inherit system config;};
+          master = import inputs.nixpkgs-master {inherit system config;};
           nur = import inputs.nurpkgs {
             pkgs = self'.legacyPackages.default;
             nurpkgs = import inputs.nixpkgs {
+              inherit (flake) overlays;
               inherit system config;
             };
           };
+
+          inherit default;
         };
 
         # Per-system attributes can be defined here. The self' and inputs'
