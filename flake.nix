@@ -11,8 +11,6 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-utils.url = "github:numtide/flake-utils";
 
-    nixgl.url = "github:nix-community/nixGL";
-    lanzaboote.url = "github:nix-community/lanzaboote";
     home-manager.url = "github:nix-community/home-manager";
   };
 
