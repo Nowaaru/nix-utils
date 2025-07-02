@@ -1,8 +1,8 @@
 {
   lib,
-  pkgs,
+  flake-parts,
   ...
-}: {
+}@inputs: {
   mkIfElse = with lib;
     predicate: yes: no:
       mkMerge [
@@ -10,9 +10,11 @@
         (mkIf (!predicate) no)
       ];
 
+  mkFlake = flake-parts.lib.mkFlake {inherit inputs;};
+
   selfTrace = this: builtins.trace this this;
 
-  mkPlymouthTheme = {
+  mkPlymouthTheme = pkgs: {
     name ? "plymouth-theme",
     description ? "A cool Plymouth theme.",
     comment ? "Welcome to Gamindustri!",

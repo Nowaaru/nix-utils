@@ -27,11 +27,9 @@
       flake-parts-lib,
       ...
     }: let
-      lib = nixpkgs-lib.outputs.lib.extend (_: _: {
+      lib = nixpkgs-lib.outputs.lib.extend (super: prev: {
         flake-parts = flake-parts-lib;
-        gamindustri = {
-          mkFlake = flake-parts.lib.mkFlake {inherit inputs;};
-        };
+        gamindustri = import ./lib prev inputs;
       });
     in rec {
       imports = [
