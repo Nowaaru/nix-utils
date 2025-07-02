@@ -27,11 +27,16 @@
       flake-parts-lib,
       ...
     }: let
-      lib = nixpkgs-lib.outputs.lib.extend (super: prev: {
-        flake-parts = flake-parts-lib;
-        gamindustri = import ./lib prev inputs;
-        inherit withSystem;
-      });
+      lib = nixpkgs-lib.outputs.lib.extend (super: prev: let
+        overrides =
+          {
+            flake-parts = flake-parts-lib;
+            inherit withSystem;
+          }
+          // home-manager.lib;
+        gamindustri = import ./lib (prev // overrides) inputs;
+      in
+        overrides // {inherit gamindustri;});
     in rec {
       imports = [
         inputs.home-manager.flakeModules.home-manager
