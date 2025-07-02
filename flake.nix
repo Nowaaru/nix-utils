@@ -30,6 +30,7 @@
       lib = nixpkgs-lib.outputs.lib.extend (super: prev: {
         flake-parts = flake-parts-lib;
         gamindustri = import ./lib prev inputs;
+        inherit withSystem;
       });
     in rec {
       imports = [
