@@ -2,7 +2,7 @@
   lib,
   flake-parts,
   ...
-}@inputs: {
+} @ inputs: {
   mkIfElse = with lib;
     predicate: yes: no:
       mkMerge [
@@ -21,7 +21,7 @@
     image ? null,
     resolution ? null,
     framerate ? 50,
-  }@params:
+  } @ params:
     with lib; let
       themeOptions =
         (evalModules {
@@ -62,12 +62,20 @@
               config = {
                 inherit comment description framerate;
                 image = let
-                  imgLib = import ./images.nix {
-                    inherit pkgs lib;
-                  };
+                  imgLib =
+                    (import ./images.nix lib).withPkgs
+                    pkgs;
 
-                  
-                  inherit (imgLib.${if (lib.strings.hasSuffix ".gif" image) then "gifToImages" else "resizeImage"} resolution image) outPath;
+                  inherit
+                    (imgLib.${
+                        if (lib.strings.hasSuffix ".gif" image)
+                        then "gifToImages"
+                        else "resizeImage"
+                      }
+                      resolution
+                      image)
+                    outPath
+                    ;
                 in
                   builtins.map (x: "${outPath}/${x}") (builtins.attrNames (
                     builtins.readDir outPath
@@ -101,7 +109,12 @@
 
           sed -i -re "s!progress\\-!!gm" $SCRIPT;
           sed -i -re "s!SPEED!${builtins.toString (themeOptions.framerate / 50)}!gm" $SCRIPT;
-          sed -i -re "s!NUM!${builtins.toString ((builtins.length themeOptions.image)/*  - 1 */)}!gm" $SCRIPT;
+          sed -i -re "s!NUM!${builtins.toString (
+            (builtins.length themeOptions.image)
+            /*
+            - 1
+            */
+          )}!gm" $SCRIPT;
         '';
 
         configurePhase = ''
@@ -133,7 +146,7 @@
     lib.attrsets.foldlAttrs (
       acc: filename: _type: acc ++ ["${dir}/${filename}"]
     ) []
-    (builtins.readDir dir);
+    (lib.filterAttrs (k: v: v != "directory" || (builtins.length (builtins.attrNames (builtins.readDir "${dir}/${k}"))) != 0) (builtins.readDir dir));
 
   withInputs = this: with_inputs: let
     imported =
