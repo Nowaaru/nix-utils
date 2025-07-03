@@ -9,13 +9,14 @@ toplevel @ {
     variables ? sessionVariables,
     extraSpecialArgs ? {},
     files ? {},
+    flake ? null,
     modules ? [],
     system,
   }: {
     # TODO: omit this hacky  ass way and
     # use the home-mousersdules/systemic-home-manager
     # module to enable home.system = "x86_64-linux"
-    __ = {inherit extraSpecialArgs system modules;};
+    __ = {inherit extraSpecialArgs flake system modules;};
     imports = programs;
 
     home = {
@@ -30,15 +31,75 @@ toplevel @ {
   };
 
   mkHomeManager = users: {
-    systemProgramsDir ? null,
+    ###
+    # Where the nixosSystem flake files are held.
+    ###
+    sysRoot ? throw "system directory must be set",
+    ###
+    # The directory in which to obtain system (generally, global)
+    # programs from.
+    ###
+    sysProgramsRoot ? "${sysRoot}/programs",
+    ###
+    # Special arguments to be filled in automatically 
+    # to home modules. 
+    ###
     specialArgs ? {},
-    cfgRoot ? "cfg",
+    ###
+    # The name of the configuration directory
+    # that will be used by the "configure"
+    # special argument for both the systems
+    # and the users.
+    ###
+    cfgRootName ? "cfg",
+    ###
+    # Where the files of the users are located.
+    ###
     usrRoot,
+    ###
+    # The inputs of the flake creating this Home Manager
+    # instance.
+    ###
+    inputs,
   }: {
     flake.homeConfigurations =
       lib.lists.foldl (
-        a: usr:
-          a
+        a: raw_usr: let
+          allInputAttributeNames = lib.attrsets.attrNames inputs;
+          usr =
+            raw_usr
+            // {
+              __ = lib.attrsets.mergeAttrsList [
+                raw_usr.__
+                {
+                  flake = let
+                    rawUsrName = usr.home.username.content;
+                    closestMatchingFlakeId =
+                      lib.lists.foldl'
+                      (previousClosestMatch: currentFlakeString: let
+                        nameDoesMatch = !(builtins.isNull (lib.strings.match ".*(${rawUsrName}).*" currentFlakeString));
+                      in
+                        if nameDoesMatch
+                        then
+                          (let
+                            levenshteinDistancePrevious =
+                              lib.strings.levenshtein rawUsrName previousClosestMatch;
+
+                            levenshteinDistanceCurrent =
+                              lib.strings.levenshtein rawUsrName currentFlakeString;
+                          in
+                            if (levenshteinDistancePrevious > levenshteinDistanceCurrent)
+                            then currentFlakeString
+                            else previousClosestMatch)
+                        else (lib.trace "current match is null: ${currentFlakeString} (${rawUsrName}}" previousClosestMatch))
+                      (builtins.elemAt allInputAttributeNames 0)
+                      allInputAttributeNames;
+                  in
+                    inputs.${lib.trace "closest matching flake id: ${closestMatchingFlakeId}" closestMatchingFlakeId};
+                }
+              ];
+            };
+        in (a
           // {
             ${usr.home.username.content} = lib.withSystem usr.__.system ({
                 config,
@@ -61,8 +122,8 @@ toplevel @ {
                           then cfgDir + ".nix"
                           else cfgDir
                         );
-                    reqCfgDir = mkCfgDir "${usrRoot}/${usr.home.username.content}/${cfgRoot}/${program_name}";
-                    fallbackCfgDir = mkCfgDir "${self}/cfg/${program_name}";
+                    reqCfgDir = mkCfgDir "${usrRoot}/${usr.home.username.content}/${cfgRootName}/${program_name}";
+                    fallbackCfgDir = mkCfgDir "${sysRoot}/${cfgRootName}/${program_name}";
                     reqExists = builtins.pathExists reqCfgDir;
                     fallbackExists = builtins.pathExists fallbackCfgDir;
                   in
@@ -82,9 +143,12 @@ toplevel @ {
 
                   _extraSpecialArgs =
                     specialArgs
+                    // rec {
+                      inputs = usr.__.flake.inputs;
+                    }
                     // usr.__.extraSpecialArgs;
 
-                  programs-dir = systemProgramsDir;
+                  programs-dir = sysProgramsRoot;
 
                   _pkgs =
                     if _extraSpecialArgs ? "pkgs"
@@ -95,7 +159,6 @@ toplevel @ {
                   extraSpecialArgs =
                     _extraSpecialArgs
                     // rec {
-                      inherit inputs' self' self;
                       # directory for user data (like meta.nix, cfg, programs...)
                       root = /${usrRoot}/${usr.home.username.content};
                       # function to read .nix files from designated cfg directory (else system fallback)
@@ -107,7 +170,7 @@ toplevel @ {
                         }
                         // _extraSpecialArgs
                       );
-                      programs = lib.throwIf (builtins.isNull systemProgramsDir) "attempt to index system programs when 'mkHomeManager.systemProgramsDir' is not set" lib.gamindustri.programs.mkProgramTreeFromDir programs-dir;
+                      programs = lib.throwIf ((builtins.isNull sysProgramsRoot) || !(builtins.pathExists sysProgramsRoot)) "attempt to index system programs when 'mkHomeManager.sysProgramsRoot' is not set (or does not exist)" lib.gamindustri.programs.mkProgramTreeFromDir programs-dir;
                       user = let
                         name = usr.home.username.content;
                         usr-programs-dir = /${usrRoot}/${name}/programs;
@@ -149,7 +212,7 @@ toplevel @ {
                     (lib.traceVal /${usrRoot}/${usernameContent})
                   ];
                 }));
-          }
+          })
       ) {}
       users;
   };
