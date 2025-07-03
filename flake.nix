@@ -86,50 +86,51 @@
         # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
       };
 
-      flake = {
-        inherit lib;
+      flake = let 
+        overlays = 
+            let
+              mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
+            in {
+              # The usual flake attributes can be defined here, including system-
+              # agnostic ones like nixosModule and system-enumerating ones, although
+              # those are more easily expressed in perSystem.
+              extend-lib = mkOverlay (overlayParams @ {config, ...}: {
+                inherit lib;
+              });
 
-        nixosModules = {
-          gpu-screen-recorder = import ./modules/gpu-screen-recorder;
-        };
+              node-neovim = mkOverlay (overlayParams @ {config, ...}: {
+                nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
+              });
 
-        overlays = let
-          mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
-        in {
-          # The usual flake attributes can be defined here, including system-
-          # agnostic ones like nixosModule and system-enumerating ones, although
-          # those are more easily expressed in perSystem.
-          extend-lib = mkOverlay (overlayParams @ {config, ...}: {
-            inherit lib;
-          });
+              stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
+                inherit
+                  (config.legacyPackages.stable)
+                  basedpyright
+                  lldb
+                  ;
+              });
 
-          node-neovim = mkOverlay (overlayParams @ {config, ...}: {
-            nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
-          });
-
-          stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
-            inherit
-              (config.legacyPackages.stable)
-              basedpyright
-              lldb
-              ;
-          });
-
-          wine-update-10-2 = let
-            version = "10.2";
-          in
-            mkOverlay (overlayParams @ {config, ...}: {
-              wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
-                a
-                // {
-                  inherit version;
-                  src = builtins.fetchurl {
-                    url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
-                    sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
-                  };
+              wine-update-10-2 = let
+                version = "10.2";
+              in
+                mkOverlay (overlayParams @ {config, ...}: {
+                  wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
+                    a
+                    // {
+                      inherit version;
+                      src = builtins.fetchurl {
+                        url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
+                        sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
+                      };
+                    });
                 });
-            });
-        };
-      };
+            };
+        in 
+          { 
+            inherit overlays lib; 
+            homeManagerModules = {
+                plasma = import ./home-modules/plasma;
+            };
+          };
     });
 }
