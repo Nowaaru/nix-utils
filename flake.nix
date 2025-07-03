@@ -29,6 +29,8 @@
         overrides =
           {
             flake-parts = flake-parts-lib;
+            maintainers = [];
+            teams = [];
             inherit withSystem;
           }
           // home-manager.lib;
