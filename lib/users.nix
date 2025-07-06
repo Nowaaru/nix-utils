@@ -32,17 +32,13 @@ toplevel @ {
 
   mkHomeManager = users: {
     ###
-    # Where the nixosSystem flake files are held.
-    ###
-    sysRoot ? throw "system directory must be set",
-    ###
     # The directory in which to obtain system (generally, global)
     # programs from.
     ###
-    sysProgramsRoot ? "${sysRoot}/programs",
+    sysProgramsRoot ? null,
     ###
-    # Special arguments to be filled in automatically 
-    # to home modules. 
+    # Special arguments to be filled in automatically
+    # to home modules.
     ###
     specialArgs ? {},
     ###
@@ -51,7 +47,7 @@ toplevel @ {
     # special argument for both the systems
     # and the users.
     ###
-    cfgRootName ? "cfg",
+    cfgRoot ? "cfg",
     ###
     # Where the files of the users are located.
     ###
@@ -91,7 +87,7 @@ toplevel @ {
                             if (levenshteinDistancePrevious > levenshteinDistanceCurrent)
                             then currentFlakeString
                             else previousClosestMatch)
-                        else (lib.trace "current match is null: ${currentFlakeString} (${rawUsrName}}" previousClosestMatch))
+                        else (lib.traceVerbose "current match for '${currentFlakeString}' is null (query: ${rawUsrName})" previousClosestMatch))
                       (builtins.elemAt allInputAttributeNames 0)
                       allInputAttributeNames;
                   in
@@ -122,8 +118,8 @@ toplevel @ {
                           then cfgDir + ".nix"
                           else cfgDir
                         );
-                    reqCfgDir = mkCfgDir "${usrRoot}/${usr.home.username.content}/${cfgRootName}/${program_name}";
-                    fallbackCfgDir = mkCfgDir "${sysRoot}/${cfgRootName}/${program_name}";
+                    reqCfgDir = mkCfgDir "${usrRoot}/${usr.home.username.content}/${cfgRoot}/${program_name}";
+                    fallbackCfgDir = mkCfgDir "${self}/cfg/${program_name}";
                     reqExists = builtins.pathExists reqCfgDir;
                     fallbackExists = builtins.pathExists fallbackCfgDir;
                   in
