@@ -53,7 +53,6 @@
         system,
         ...
       } @ systemArguments: let
-        default = import inputs.nixpkgs {inherit system config;};
         config = {
           allowUnfree = true;
           permittedInsecurePackages = [
@@ -61,15 +60,33 @@
             "dotnet-sdk-7.0.410"
             "dotnet-runtime-7.0.20"
           ];
+
+          nvidia.acceptLicense = true;
         };
       in rec {
         _module.args.pkgs = legacyPackages.default;
 
         # overlayAttrs = lib.foldlAttrs (acc: k: v: acc // { ${lib.strings.removeSuffix ".nix" k} = import builtins.readDir ./overlays);
 
-        legacyPackages = {
-          stable = import inputs.nixpkgs-mirror {inherit system config;};
-          master = import inputs.nixpkgs-master {inherit system config;};
+        legacyPackages = let
+          overlayLib = nixpkgs-item: let
+            imported = import nixpkgs-item {inherit system config;};
+          in
+            imported
+            // {
+              lib = imported.lib.extend (super: prev:
+                (lib.removeAttrs lib ["teams" "maintainers"])
+                // {
+                  inherit (nixpkgs-item) teams maintainers;
+                  inherit (nixpkgs-item.lib) nixosSystem;
+                });
+            };
+        in {
+          default = overlayLib inputs.nixpkgs;
+          unstable = overlayLib inputs.nixpkgs;
+          stable = overlayLib inputs.nixpkgs-mirror;
+          master = overlayLib inputs.nixpkgs-master;
+
           nur = import inputs.nurpkgs {
             pkgs = self'.legacyPackages.default;
             nurpkgs = import inputs.nixpkgs {
@@ -77,8 +94,6 @@
               inherit system config;
             };
           };
-
-          inherit default;
         };
 
         # Per-system attributes can be defined here. The self' and inputs'
@@ -88,51 +103,49 @@
         # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
       };
 
-      flake = let 
-        overlays = 
-            let
-              mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
-            in {
-              # The usual flake attributes can be defined here, including system-
-              # agnostic ones like nixosModule and system-enumerating ones, although
-              # those are more easily expressed in perSystem.
-              extend-lib = mkOverlay (overlayParams @ {config, ...}: {
-                inherit lib;
-              });
+      flake = let
+        overlays = let
+          mkOverlay = outputFunction: _: prev: (withSystem prev.stdenv.hostPlatform.system outputFunction);
+        in {
+          # The usual flake attributes can be defined here, including system-
+          # agnostic ones like nixosModule and system-enumerating ones, although
+          # those are more easily expressed in perSystem.
+          extend-lib = mkOverlay (overlayParams @ {config, ...}: {
+            inherit lib;
+          });
 
-              node-neovim = mkOverlay (overlayParams @ {config, ...}: {
-                nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
-              });
+          node-neovim = mkOverlay (overlayParams @ {config, ...}: {
+            nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
+          });
 
-              stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
-                inherit
-                  (config.legacyPackages.stable)
-                  basedpyright
-                  lldb
-                  ;
-              });
+          stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
+            inherit
+              (config.legacyPackages.stable)
+              basedpyright
+              lldb
+              ;
+          });
 
-              wine-update-10-2 = let
-                version = "10.2";
-              in
-                mkOverlay (overlayParams @ {config, ...}: {
-                  wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
-                    a
-                    // {
-                      inherit version;
-                      src = builtins.fetchurl {
-                        url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
-                        sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
-                      };
-                    });
+          wine-update-10-2 = let
+            version = "10.2";
+          in
+            mkOverlay (overlayParams @ {config, ...}: {
+              wineWowPackages.full = config.legacyPackages.wineWowPackages.full.overrideAttrs (a:
+                a
+                // {
+                  inherit version;
+                  src = builtins.fetchurl {
+                    url = "https://dl.winehq.org/wine/source/10.x/wine-${version}.tar.xz"; #
+                    sha256 = "sha256:0gr40jnv4wz23cgvk21axb9k0irbf5kh17vqnjki1f0hryvdz44x";
+                  };
                 });
-            };
-        in 
-          { 
-            inherit overlays lib; 
-            homeManagerModules = {
-                plasma = import ./home-modules/plasma;
-            };
-          };
+            });
+        };
+      in {
+        inherit overlays lib;
+        homeManagerModules = {
+          plasma = import ./home-modules/plasma;
+        };
+      };
     });
 }
