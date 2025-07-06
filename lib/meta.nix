@@ -12,6 +12,8 @@
 
   mkFlake = flake-parts.lib.mkFlake {inherit inputs;};
 
+  traceVerbose = builtins.traceVerbose;
+
   selfTrace = this: builtins.trace this this;
 
   mkPlymouthTheme = pkgs: {
