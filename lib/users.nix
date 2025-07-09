@@ -61,6 +61,7 @@ toplevel @ {
     flake.homeConfigurations =
       lib.lists.foldl (
         a: raw_usr: let
+          meta = (lib.gamindustri.systems.evalUserMetaFile "${usrRoot}/${usr.home.username.content}/meta.nix" {}).config;
           allInputAttributeNames = lib.attrsets.attrNames inputs;
           usr =
             raw_usr
@@ -206,7 +207,7 @@ toplevel @ {
 
                     (lib.attrsets.filterAttrs (k: _: !(builtins.elem k ["__"])) usr)
                     (lib.traceVal /${usrRoot}/${usernameContent})
-                  ];
+                  ] ++ meta.home-modules;
                 }));
           })
       ) {}
