@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 
-# The Gamindustri utility command set.
+# the Gamindustri utility command set.
 #
 # Use for maintenance upon several
 # gamindustri flakes.
