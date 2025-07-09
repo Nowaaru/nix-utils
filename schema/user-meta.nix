@@ -2,6 +2,7 @@ importParams@{
     lib,
     inputs,
     allSystems,
+    flake,
 }: {config, ...} @ moduleParams: {
     imports = [];
 
@@ -23,12 +24,12 @@ importParams@{
                 (oneOf 
                     (enum lib.attrsets.foldlAttrs 
                         (acc: k: v: 
-                            acc ++ (lib.attrsets.attrValues v)) [] inputs.gamindustri-utils.legacyPackages)
+                            acc ++ (lib.attrsets.attrValues v)) [] flake.legacyPackages)
                 (enum 
                     lib.lists.foldl 
                         (acc: system: 
                             acc ++ (lib.lists.imap0 
-                                (idx: dep: "${system}.${dep}") (lib.attrNames inputs.gamindustri-utils.legacyPackages.${v}))) 
+                                (idx: dep: "${system}.${dep}") (lib.attrNames flake.legacyPackages.${v}))) 
                         [] config.systems));
         
         apply = (value: 
@@ -38,7 +39,9 @@ importParams@{
                 let 
                     splitPackageSetId = lib.strings.split "\\." value;
                 in 
-                    inputs.gamindustri-utils.legacyPackages.${lib.lists.head splitPackageSetId}.${lib.lists.tail splitPackageSetId}));
+                    flake.legacyPackages.${lib.lists.head splitPackageSetId}.${lib.lists.tail splitPackageSetId}));
+
+        default = "${lib.lists.head config.systems}.stable";
       };
 
       systems = mkOption {
