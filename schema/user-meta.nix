@@ -2,6 +2,8 @@ importParams @ {
   lib,
   flake,
   allSystems,
+  location,
+  ...
 }: {config, ...}: {
   imports = [];
 
@@ -13,6 +15,13 @@ importParams @ {
       visible = false;
     };
 
+    name = mkOption {
+      description = "The name of this user.";
+      type = uniq str;
+      default = builtins.baseNameOf (lib.strings.normalizePath (lib.strings.removeSuffix "/meta.nix" (lib.strings.normalizePath location)));
+      apply = v: (builtins.traceVerbose "chosen name: ${v}" v);
+    };
+
     groups = mkOption rec {
       description = "The groups for this user.";
       type = listOf str;
@@ -21,17 +30,17 @@ importParams @ {
     };
 
     shell = mkOption {
-      type = either string package;
+      type = either str package;
       description = "The user's shell.";
-      default = config.packageset.zsh;
+      default = builtins.traceVerbose "packageset: ${config.packageset}" config.packageset.zsh;
       apply = v:
-        if ((lib.strings.typeOf value) == "set")
+        if ((lib.strings.typeOf v) == "set")
         then v
         else config.packageset.${v};
     };
 
     description = mkOption {
-      description = "The description for this user.";
+      description = uniq "The description for this user.";
       type = nullOr str;
       default = "A Gamindustri user.";
     };
@@ -43,34 +52,28 @@ importParams @ {
         as the system it is being used by, otherwise assertions will fail.
       '';
 
-      type =
+      type = 
         either
-        (oneOf
-          (enum lib.attrsets.foldlAttrs
-            (acc: k: v:
-              acc ++ (lib.attrsets.attrValues v)) []
-            flake.legacyPackages)
+          (enum (lib.attrsets.foldlAttrs (acc: _: v: acc ++ (lib.attrsets.attrValues v)) [] flake.legacyPackages))
           (enum
-            lib.lists.foldl
-            (acc: system:
-              acc
-              ++ (lib.lists.imap0
-                (idx: dep: "${system}.${dep}") (lib.attrNames flake.legacyPackages.${v})))
-            []
-            config.system));
+            (lib.lists.foldl
+                (acc: system:
+                  acc ++ 
+                  (lib.lists.imap0 (idx: dep: "${system}.${dep}") (lib.attrNames flake.legacyPackages.${system})))
+            [] (lib.attrNames flake.legacyPackages)));
 
       apply = value:
-        if ((lib.strings.typeOf value) == "set")
+        if (lib.types.isType "set" value)
         then value
         else
           (
             let
               splitPackageSetId = lib.strings.split "\\." value;
             in
-              flake.legacyPackages.${lib.lists.head splitPackageSetId}.${lib.lists.tail splitPackageSetId}
+              flake.legacyPackages.${lib.lists.head splitPackageSetId}.${lib.lists.last splitPackageSetId}
           );
 
-      default = "${lib.lists.head config.system}.stable";
+      default = "${config.system}.stable";
     };
 
     system = mkOption {
