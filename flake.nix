@@ -35,11 +35,12 @@
             inherit withSystem;
           }
           // home-manager.lib;
-        gamindustri = prev.callPackageWith lib {
+        gamindustri = prev.callPackageWith (prev // overrides) ./lib {
           inherit inputs flake-parts-lib;
+          flake = config.flake;
+          self = ./.;
           lib = prev // overrides;
-          flake = config;
-        } {};
+        };
       in
         overrides // {inherit gamindustri;});
     in rec {
@@ -84,15 +85,14 @@
           overlayLib = nixpkgs-item: let
             imported = import nixpkgs-item {inherit system config;};
           in
-            imported
-            // {
+            imported.extend (s: p: {
               lib = imported.lib.extend (super: prev:
                 (lib.removeAttrs lib ["teams" "maintainers"])
                 // {
-                  inherit (nixpkgs-item) teams maintainers;
                   inherit (nixpkgs-item.lib) nixosSystem;
+                  inherit (p.lib) teams maintainers;
                 });
-            };
+            });
         in {
           default = overlayLib inputs.nixpkgs;
           unstable = overlayLib inputs.nixpkgs;
