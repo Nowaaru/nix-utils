@@ -19,21 +19,25 @@ lib @ {
           };
 
           description = mkOption {
-            description = "The description for this System.";
+            description = "The description for this system.";
             type = nullOr str;
             default = "A NixOS system.";
           };
 
           architecture = mkOption {
             description = "The system architecture that this configuration should be run on.";
-            type = nullOr (enum allSystems);
-            default = null;
+            type = enum allSystems;
           };
 
           specialArgs = mkOption {
             description = "Arguments to be layed over all modules.";
             type = attrs;
             default = {};
+          };
+
+          usersDir = mkOption {
+            description = "The directory for the currently-registered system users.";
+            type = nullOr path;
           };
 
           baseModules = mkOption {
@@ -50,10 +54,7 @@ lib @ {
         config.specialArgs =
           lib.mkMerge
           [
-            {
-              # pkgs = baseModule.config.repositories.main;
-              meta = baseModule.config;
-            }
+            { meta = baseModule.config; }
             baseModule.config.repositories.fallback
             systemImportArgs
           ];
