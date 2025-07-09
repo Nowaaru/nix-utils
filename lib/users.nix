@@ -92,7 +92,7 @@ toplevel @ {
                       (builtins.elemAt allInputAttributeNames 0)
                       allInputAttributeNames;
                   in
-                    inputs.${lib.trace "closest matching flake id: ${closestMatchingFlakeId}" closestMatchingFlakeId};
+                    inputs.${lib.traceVerbose "closest matching flake id: ${closestMatchingFlakeId}" closestMatchingFlakeId};
                 }
               ];
             };
@@ -152,7 +152,7 @@ toplevel @ {
                     then _extraSpecialArgs.pkgs
                     else self'.legacyPackages.default;
                 in {
-                  pkgs = builtins.trace _pkgs.config.permittedInsecurePackages _pkgs;
+                  pkgs = lib.traceVerbose _pkgs.config.permittedInsecurePackages _pkgs;
                   extraSpecialArgs =
                     _extraSpecialArgs
                     // rec {
