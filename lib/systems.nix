@@ -1,5 +1,6 @@
 {
   inputs,
+  flake,
   flake-parts-lib,
 } @ lib: let
   inherit (flake-parts-lib) importApply;
@@ -33,6 +34,9 @@ in {
     modules = [
       (importApply ./schema/user-meta.nix {
         inherit lib inputs;
+        inherit (inputs.flake-utils.lib) allSystems;
+        inherit flake;
+
         userImportArgs = newSpecialArgs;
       })
 

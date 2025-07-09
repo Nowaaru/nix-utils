@@ -21,6 +21,7 @@
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} (flake-params @ {
+      config,
       withSystem,
       flake-parts-lib,
       ...
@@ -37,6 +38,7 @@
         gamindustri = prev.callPackageWith lib {
           inherit inputs flake-parts-lib;
           lib = prev // overrides;
+          flake = config;
         } {};
       in
         overrides // {inherit gamindustri;});
