@@ -2,18 +2,21 @@
   inputs,
   flake,
   flake-parts-lib,
-} @ lib: let
+  lib,
+  self,
+  ...
+}: let
   inherit (flake-parts-lib) importApply;
 in {
   evalSystemMetafile = metaFile: specialArgs: let
     newSpecialArgs =
-      if specialArgs
+      if (!(builtins.isNull specialArgs))
       then specialArgs
       else {};
   in
     lib.evalModules {
       modules = [
-        (importApply ./schema/system-meta.nix {
+        (importApply (self + /schema/system-meta.nix) {
           inherit (lib.gamindustri.meta) mkIfElse;
           inherit (lib.options) mkOption mkEnableOption;
           inherit (lib) types mkIf mkMerge mkForce;
@@ -30,17 +33,22 @@ in {
       if specialArgs
       then specialArgs
       else {};
+
+        checkedMetaFile = 
+            if (lib.types.isType "lambda" (import metaFile))
+            then importApply metaFile newSpecialArgs
+            else metaFile;
+
   in (lib.evalModules {
     modules = [
-      (importApply ./schema/user-meta.nix {
-        inherit lib inputs;
+      (importApply (self + /schema/user-meta.nix) {
         inherit (inputs.flake-utils.lib) allSystems;
         inherit flake;
-
-        userImportArgs = newSpecialArgs;
+        inherit lib;
+        location = metaFile;
       })
 
-      (importApply metaFile newSpecialArgs)
+      checkedMetaFile
     ];
   });
 }

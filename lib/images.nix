@@ -1,4 +1,10 @@
-lib: {
+{
+  evalModules,
+  options,
+  types,
+  lib,
+  ...
+}: {
     withPkgs = pkgs: 
     {
       resizeImage = resize: imagePath:
@@ -8,13 +14,13 @@ lib: {
 
           unpackPhase = ''true'';
 
-          src = with lib;
-            (lib.evalModules {
-              modules = with lib.types;
+          src = 
+            (evalModules {
+              modules = with types;
               with (import ./types.nix lib); [
                 {
                   options = {
-                    image = mkOption {
+                    image = options.mkOption {
                       type = let
                         imageUnionType = oneOf [
                           (imageWithExt ".gif")
@@ -56,13 +62,13 @@ lib: {
 
           unpackPhase = ''true'';
 
-          src = with lib;
-            (lib.evalModules {
-              modules = with lib.types;
+          src = 
+            (evalModules {
+              modules = with types;
               with (import ./types.nix lib); [
                 {
                   options = {
-                    image = mkOption {
+                    image = options.mkOption {
                       type = let
                         imageUnionType = oneOf [
                           (imageWithExt ".gif")

@@ -1,5 +1,9 @@
-lib: rec {
-  image = with lib.types;
+{
+ types,
+ strings,
+ ...
+}: rec {
+  image = with types;
     mkOptionType {
       name = "image";
 
@@ -16,6 +20,6 @@ lib: rec {
       description = "image with ${ext} extension";
       check = x:
         (image.check x)
-        && lib.strings.hasSuffix ext x;
+        && strings.hasSuffix ext x;
     };
 }

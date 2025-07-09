@@ -1,14 +1,21 @@
 {
   asserts,
   lists,
+  options,
   attrsets,
   strings,
   inputs,
   traceVal,
+  types,
+  evalModules,
+  licenses,
+  lib,
   ...
-} @ lib: let
+}@me: let
   inherit (inputs) flake-parts;
 in {
+  inherit (builtins) traceVerbose;
+
   mkIfElse = with lib;
     predicate: yes: no:
       mkMerge [
@@ -18,9 +25,7 @@ in {
 
   mkFlake = flake-parts.lib.mkFlake {inherit inputs;};
 
-  traceVerbose = builtins.traceVerbose;
-
-  selfTrace = this: builtins.trace this this;
+  selfTrace = traceVal;
 
   mkPlymouthTheme = pkgs: {
     name ? "plymouth-theme",
@@ -30,14 +35,14 @@ in {
     resolution ? null,
     framerate ? 50,
   } @ params:
-    with lib; let
+    let
       themeOptions =
         (evalModules {
           modules = with types;
           with (import ./types.nix lib); [
             {
               options = {
-                image = mkOption {
+                image = options.mkOption {
                   type = let
                     imageUnionType = oneOf [
                       (imageWithExt ".gif")
@@ -51,17 +56,17 @@ in {
                   description = "the image, or list of images to use for the theme";
                 };
 
-                comment = mkOption {
+                comment = options.mkOption {
                   type = strMatching ".*";
                   description = "The author comment for the theme.";
                 };
 
-                description = mkOption {
+                description = options.mkOption {
                   type = strMatching ".*";
                   description = "The author description for the theme.";
                 };
 
-                framerate = mkOption {
+                framerate = options.mkOption {
                   type = ints.between 0 50;
                   description = "The author description for the theme.";
                 };
@@ -71,7 +76,7 @@ in {
                 inherit comment description framerate;
                 image = let
                   imgLib =
-                    (import ./images.nix lib).withPkgs
+                    (import ./images.nix me).withPkgs
                     pkgs;
 
                   inherit
@@ -100,10 +105,6 @@ in {
 
         phases = ["buildPhase" "configurePhase" "fixupPhase"];
 
-        # FIXME: if i do not figure out why this does piece of
-        # retard shit is building to /build/ instead of $out
-        # i am going to have the greatest crashout ever perceived
-        # by another human mark my fucking words
         buildPhase = ''
           # echo "out: $out, out-dir: $OUT_DIR, src: $src, img-dir: $IMG_DIR";
           export OUT_DIR=$out/share/plymouth/themes/${name}
@@ -146,15 +147,15 @@ in {
         };
 
         meta = {
-          license = lib.licenses.gpl3Only;
+          license = licenses.gpl3Only;
         };
       });
 
   mkModules = dir:
-    lib.attrsets.foldlAttrs (
+    attrsets.foldlAttrs (
       acc: filename: _type: acc ++ ["${dir}/${filename}"]
     ) []
-    (lib.filterAttrs (k: v: v != "directory" || (builtins.length (builtins.attrNames (builtins.readDir "${dir}/${k}"))) != 0) (builtins.readDir dir));
+    (attrsets.filterAttrs (k: v: v != "directory" || (builtins.length (builtins.attrNames (builtins.readDir "${dir}/${k}"))) != 0) (builtins.readDir dir));
 
   withInputs = this: with_inputs: let
     imported =
