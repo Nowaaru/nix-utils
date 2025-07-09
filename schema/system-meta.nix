@@ -54,7 +54,7 @@ lib @ {
         config.specialArgs =
           lib.mkMerge
           [
-            { meta = baseModule.config; }
+            {meta = baseModule.config;}
             baseModule.config.repositories.fallback
             systemImportArgs
           ];
