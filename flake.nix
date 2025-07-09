@@ -34,7 +34,10 @@
             inherit withSystem;
           }
           // home-manager.lib;
-        gamindustri = import ./lib (prev // overrides) inputs;
+        gamindustri = prev.callPackageWith lib {
+          inherit inputs flake-parts-lib;
+          lib = prev // overrides;
+        } {};
       in
         overrides // {inherit gamindustri;});
     in rec {
@@ -65,6 +68,13 @@
         };
       in rec {
         _module.args.pkgs = legacyPackages.default;
+
+        devShells.default = legacyPackages.default.mkShell {
+          packages = [pkgs.nushell];
+          shellHook = ''
+            nu -li
+          '';
+        };
 
         # overlayAttrs = lib.foldlAttrs (acc: k: v: acc // { ${lib.strings.removeSuffix ".nix" k} = import builtins.readDir ./overlays);
 

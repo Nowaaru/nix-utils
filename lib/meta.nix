@@ -1,8 +1,14 @@
 {
-  lib,
-  flake-parts,
+  asserts,
+  lists,
+  attrsets,
+  strings,
+  inputs,
+  traceVal,
   ...
-} @ inputs: {
+} @ lib: let
+  inherit (inputs) flake-parts;
+in {
   mkIfElse = with lib;
     predicate: yes: no:
       mkMerge [
@@ -70,7 +76,7 @@
 
                   inherit
                     (imgLib.${
-                        if (lib.strings.hasSuffix ".gif" image)
+                        if (strings.hasSuffix ".gif" image)
                         then "gifToImages"
                         else "resizeImage"
                       }
@@ -102,7 +108,7 @@
           # echo "out: $out, out-dir: $OUT_DIR, src: $src, img-dir: $IMG_DIR";
           export OUT_DIR=$out/share/plymouth/themes/${name}
           export SCRIPT=$OUT_DIR/${name}.script
-          export IMG0=${(lib.traceVal (builtins.elemAt themeOptions.image 0))}
+          export IMG0=${(traceVal (builtins.elemAt themeOptions.image 0))}
           export IMG_DIR=$(dirname $(realpath $IMG0))
 
           mkdir -pv $OUT_DIR
@@ -157,7 +163,7 @@
       else this;
     is_attrset = builtins.isAttrs imported;
     parameters = builtins.functionArgs imported;
-    unfillableParameters = builtins.attrNames (lib.attrsets.filterAttrs (k: v: !v && this ? k)) parameters;
+    unfillableParameters = builtins.attrNames (attrsets.filterAttrs (k: v: !v && this ? k)) parameters;
     amtUnfillable = builtins.length unfillableParameters;
   in
     if is_attrset
@@ -165,11 +171,11 @@
     else
       (
         if
-          (lib.asserts.assertMsg (builtins.isFunction imported
-            || (lib.asserts.assertMsg (
+          (asserts.assertMsg (builtins.isFunction imported
+            || (asserts.assertMsg (
                 amtUnfillable
                 == 0
-              ) "parameters ${lib.lists.imap0 (k: v: "${
+              ) "parameters ${lists.imap0 (k: v: "${
                   if (k - 1 == amtUnfillable)
                   then "'${v},' and"
                   else
@@ -181,7 +187,7 @@
                 }")
                 unfillableParameters} do not have defaults and are not filled in by parameter 'args'") {})
           "input function is not of type function (got ${builtins.typeOf this})")
-        then (import this (lib.attrsets.filterAttrs (k: _: (builtins.elem k (builtins.attrNames parameters))) with_inputs))
+        then (import this (attrsets.filterAttrs (k: _: (builtins.elem k (builtins.attrNames parameters))) with_inputs))
         else {}
       );
 }
