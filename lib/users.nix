@@ -177,13 +177,6 @@ toplevel @ {
                           if (builtins.pathExists usr-programs-dir)
                           then (lib.gamindustri.programs.mkProgramTreeFromDir usr-programs-dir)
                           else {};
-
-                        # programs = import /${self}/programs (args
-                        #   // specialArgs
-                        #   // {
-                        #     inherit (/* localFlake.lib.traceVal */ pkgs) config;
-                        #     inherit (lib) withSystem;
-                        #   });
                       };
                     };
 
