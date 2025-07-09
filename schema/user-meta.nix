@@ -7,6 +7,12 @@ importParams@{
     imports = [];
 
     options = with lib.options; with lib.types; {
+      home-modules = mkOption {
+        internal = true;
+        readOnly = true;
+        visible = false;
+      };
+
       description = mkOption {
         description = "The description for this system.";
         type = nullOr str;
@@ -54,4 +60,11 @@ importParams@{
         type = enum allSystems; 
       };
     };
+
+    config.home-modules = lib.singleton
+        {
+            nixpkgs = {
+                inherit (config.packageset) config;
+            };
+        };
 }
