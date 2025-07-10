@@ -19,7 +19,7 @@ in {
         (importApply (self + /schema/system-meta.nix) {
           inherit (lib.gamindustri.meta) mkIfElse;
           inherit (lib.options) mkOption mkEnableOption;
-          inherit (lib) types mkIf mkMerge mkForce;
+          inherit (lib) types mkIf mkMerge mkDefault mkForce;
           inherit (inputs.flake-utils.lib) allSystems;
           systemImportArgs = newSpecialArgs;
         })
@@ -34,11 +34,10 @@ in {
       then specialArgs
       else {};
 
-        checkedMetaFile = 
-            if (lib.types.isType "lambda" (import metaFile))
-            then importApply metaFile newSpecialArgs
-            else metaFile;
-
+    checkedMetaFile =
+      if (lib.types.isType "lambda" (import metaFile))
+      then importApply metaFile newSpecialArgs
+      else metaFile;
   in (lib.evalModules {
     modules = [
       (importApply (self + /schema/user-meta.nix) {
