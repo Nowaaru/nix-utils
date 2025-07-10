@@ -127,7 +127,7 @@
           });
 
           node-neovim = mkOverlay (overlayParams @ {config, ...}: {
-            nodePackages = config.legacyPackages.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
+            nodePackages = config.legacyPackages.default.nodePackages // {neovim = config.packages.master.node-neovim-client;}; # config.legacyPackages.nodePackages // { neovim = final.neovim-node-client; };
           });
 
           stable-basedpyright = mkOverlay (overlayParams @ {config, ...}: {
