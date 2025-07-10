@@ -1,6 +1,8 @@
-lib: let
-  inherit (lib) strings attrsets;
-
+{
+  strings,
+  attrsets,
+  ...
+}: let
   directoryPredicate = dir:
     attrsets.foldlAttrs (
       acc: filename: type: let

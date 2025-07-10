@@ -52,14 +52,14 @@ importParams @ {
         as the system it is being used by, otherwise assertions will fail.
       '';
 
-      type = 
+      type =
         either
-          (enum (lib.attrsets.foldlAttrs (acc: _: v: acc ++ (lib.attrsets.attrValues v)) [] flake.legacyPackages))
-          (enum
-            (lib.lists.foldl
-                (acc: system:
-                  acc ++ 
-                  (lib.lists.imap0 (idx: dep: "${system}.${dep}") (lib.attrNames flake.legacyPackages.${system})))
+        (enum (lib.attrsets.foldlAttrs (acc: _: v: acc ++ (lib.attrsets.attrValues v)) [] flake.legacyPackages))
+        (enum
+          (lib.lists.foldl
+            (acc: system:
+              acc
+              ++ (lib.lists.imap0 (idx: dep: "${system}.${dep}") (lib.attrNames flake.legacyPackages.${system})))
             [] (lib.attrNames flake.legacyPackages)));
 
       apply = value:
@@ -87,11 +87,11 @@ importParams @ {
     };
   };
 
-  config.home-modules =
-    lib.singleton
+  config.home-modules = [
     {
       nixpkgs = {
         inherit (config.packageset) config;
       };
-    };
+    }
+  ];
 }

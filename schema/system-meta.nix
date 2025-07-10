@@ -1,5 +1,6 @@
 lib @ {
   mkIf,
+  mkDefault,
   mkMerge,
   mkEnableOption,
   mkOption,
@@ -49,6 +50,11 @@ lib @ {
         config.baseModules = [
           {nixpkgs.pkgs = lib.mkForce baseModule.config.repositories.main;}
           {nixpkgs.hostPlatform = lib.mkForce baseModule.config.system.architecture;}
+          {
+            programs.nh = {
+              flake = mkDefault "/etc/nixos";
+            };
+          }
         ];
 
         config.specialArgs =

@@ -1,14 +1,14 @@
 {
-  self,
   attrsets,
   strings,
-  inputs,
-  lib,
   flake,
+  inputs,
+  flake-parts-lib,
+  self,
+  lib,
   ...
 } @ lib-args: let
-  specialLibraries = ["users.nix" "meta.nix"];
-  metaFunctions = lib.callPackageWith lib ./meta.nix lib-args;
+  metaFunctions = import ./meta.nix (lib // lib-args);
   metaLib = lib-args // metaFunctions;
 in
   (attrsets.foldlAttrs (
@@ -17,14 +17,11 @@ in
         // (let
           importPath = ./. + "/${k}";
         in {
-          ${strings.removeSuffix ".nix" k} =
-            if (builtins.elem k specialLibraries)
-            then lib.callPackageWith lib importPath lib-args
-            # metaLib.withInputs importPath (inputs
-            #   // {
-            #     lib = metaLib // {gamindustri = acc;};
-            #   })
-            else lib.callPackageWith lib importPath lib-args;
+          ${strings.removeSuffix ".nix" k} = lib.callPackageWith lib importPath {
+            lib = lib // metaLib // {gamindustri = acc;};
+            gamindustri = acc;
+            inherit flake inputs flake-parts-lib self;
+          };
         })
     ) {} (
       attrsets.filterAttrs (

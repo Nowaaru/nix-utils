@@ -26,7 +26,7 @@
       flake-parts-lib,
       ...
     }: let
-      lib = nixpkgs-lib.outputs.lib.extend (super: prev: let
+      lib = nixpkgs-lib.outputs.lib.extend (prev: final: let
         overrides =
           {
             flake-parts = flake-parts-lib;
@@ -35,11 +35,11 @@
             inherit withSystem;
           }
           // home-manager.lib;
-        gamindustri = prev.callPackageWith (prev // overrides) ./lib {
+        gamindustri = prev.callPackageWith (final // overrides) ./lib {
           inherit inputs flake-parts-lib;
           flake = config.flake;
           self = ./.;
-          lib = prev // overrides;
+          lib = final // overrides;
         };
       in
         overrides // {inherit gamindustri;});
