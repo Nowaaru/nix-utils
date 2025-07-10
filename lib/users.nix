@@ -88,11 +88,14 @@ toplevel @ {
                             if (levenshteinDistancePrevious > levenshteinDistanceCurrent)
                             then currentFlakeString
                             else previousClosestMatch)
-                        else (lib.traceVerbose "current match for '${currentFlakeString}' is null (query: ${rawUsrName})" previousClosestMatch))
+                        else (lib.gamindustri.meta.traceVerbose "current match for '${currentFlakeString}' is null (query: ${rawUsrName})" previousClosestMatch))
                       (builtins.elemAt allInputAttributeNames 0)
                       allInputAttributeNames;
                   in
-                    inputs.${lib.traceVerbose "closest matching flake id: ${closestMatchingFlakeId}" closestMatchingFlakeId};
+                    (inputs.${lib.gamindustri.meta.traceVerbose "closest matching flake id: ${closestMatchingFlakeId}" closestMatchingFlakeId} // 
+                        { 
+                            inputs = inputs.${closestMatchingFlakeId}.inputs // { self = inputs.${closestMatchingFlakeId}.outPath; };
+                        });
                 }
               ];
             };
@@ -151,8 +154,8 @@ toplevel @ {
                     if _extraSpecialArgs ? "pkgs"
                     then _extraSpecialArgs.pkgs
                     else self'.legacyPackages.default;
-                in {
-                  pkgs = lib.traceVerbose _pkgs.config.permittedInsecurePackages _pkgs;
+                in rec {
+                  pkgs = builtins.traceVerbose _pkgs.config.permittedInsecurePackages _pkgs;
                   extraSpecialArgs =
                     _extraSpecialArgs
                     // rec {
@@ -167,7 +170,11 @@ toplevel @ {
                         }
                         // _extraSpecialArgs
                       );
+
+                      # programs = lib.gamindustri.programs.mkProgramTreeFromDir programs-dir;
+
                       programs = lib.throwIf ((builtins.isNull sysProgramsRoot) || !(builtins.pathExists sysProgramsRoot)) "attempt to index system programs when 'mkHomeManager.sysProgramsRoot' is not set (or does not exist)" lib.gamindustri.programs.mkProgramTreeFromDir programs-dir;
+
                       user = let
                         name = usr.home.username.content;
                         usr-programs-dir = /${usrRoot}/${name}/programs;
@@ -182,25 +189,27 @@ toplevel @ {
 
                   modules = let
                     usernameContent = usr.home.username.content;
-                  in [
-                    # patches below
-                    {
-                      # patch to add application .desktop files
-                      # automatically to launchers and things
-                      xdg.systemDirs.data = ["/home/${usernameContent}/.local/state/nix/profiles/home-manager/home-path/share/applications/"];
-                    }
+                  in
+                    lib.trace extraSpecialArgs.programs [
+                      # patches below
+                      {
+                        # patch to add application .desktop files
+                        # automatically to launchers and things
+                        xdg.systemDirs.data = ["/home/${usernameContent}/.local/state/nix/profiles/home-manager/home-path/share/applications/"];
+                      }
 
-                    # automatically setup wineprefix and other environment variables
-                    {
-                      home.sessionVariables = {
-                        GAMES_DIR = lib.mkDefault "/home/${usernameContent}/Games";
-                        WINEPREFIX = lib.mkDefault "/home/${usernameContent}/.wine";
-                      };
-                    }
+                      # automatically setup wineprefix and other environment variables
+                      {
+                        home.sessionVariables = {
+                          GAMES_DIR = lib.mkDefault "/home/${usernameContent}/Games";
+                          WINEPREFIX = lib.mkDefault "/home/${usernameContent}/.wine";
+                        };
+                      }
 
-                    (lib.attrsets.filterAttrs (k: _: !(builtins.elem k ["__"])) usr)
-                    (lib.traceVal /${usrRoot}/${usernameContent})
-                  ] ++ meta.home-modules;
+                      (lib.attrsets.filterAttrs (k: _: !(builtins.elem k ["__"])) usr)
+                      (lib.traceVal /${usrRoot}/${usernameContent})
+                    ]
+                    ++ meta.home-modules;
                 }));
           })
       ) {}
